@@ -84,6 +84,7 @@ public class LongMapImpl<V> implements LongMap<V> {
                 } else {
                     nodes[getIndex(key)] = null;
                 }
+                size--;
                 return node.getValue();
             } else {
                 Node<Long, V> nodeNext;
@@ -96,6 +97,7 @@ public class LongMapImpl<V> implements LongMap<V> {
                             } else {
                                 node.setNext(nodeNext.getNext());
                             }
+                            size--;
                             return nodeNext.getValue();
                         } else {
                             node = nodeNext;
