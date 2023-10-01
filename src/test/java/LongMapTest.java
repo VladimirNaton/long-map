@@ -192,4 +192,24 @@ public class LongMapTest {
     }
 
 
+    @Test
+    public void testValueToSameIndex() {
+        LongMapImpl<String> longMap = new LongMapImpl<>();
+
+        for (int i = 0; i < 150; ) {
+            longMap.put(i, "test" + i);
+            i += 16;
+        }
+
+        String value = longMap.get(48);
+
+        assertEquals("test48", value);
+
+        longMap.remove(48);
+
+        String valueAfter = longMap.get(64);
+        assertEquals("test64", valueAfter);
+    }
+
+
 }
