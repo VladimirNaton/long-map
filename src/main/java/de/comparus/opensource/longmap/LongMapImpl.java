@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class LongMapImpl<V> implements LongMap<V> {
 
     private static Integer START_CAPACITY = 16;
+    private static Integer NOT_FREE_INDEXES = 0;
 
     private Long size = 0L;
 
@@ -37,6 +38,7 @@ public class LongMapImpl<V> implements LongMap<V> {
             Node<Long, V> node = getValueForKey(key, nodes);
             if (node == null) {
                 nodes[getIndex(key)] = setNode(key, value);
+                NOT_FREE_INDEXES++;
                 resize();
                 size++;
             } else {
@@ -70,6 +72,7 @@ public class LongMapImpl<V> implements LongMap<V> {
         START_CAPACITY = 16;
         size = 0L;
         nodes = new Node[START_CAPACITY];
+        NOT_FREE_INDEXES = 0;
 
     }
 
@@ -83,6 +86,7 @@ public class LongMapImpl<V> implements LongMap<V> {
                     nodes[getIndex(key)] = nodeNext;
                 } else {
                     nodes[getIndex(key)] = null;
+                    NOT_FREE_INDEXES--;
                 }
                 size--;
                 return node.getValue();
@@ -255,13 +259,7 @@ public class LongMapImpl<V> implements LongMap<V> {
 
 
     private void resize() {
-        AtomicLong arraySize = new AtomicLong(0L);
-        Arrays.stream(nodes).iterator().forEachRemaining(elem -> {
-            if (elem != null) {
-                arraySize.getAndIncrement();
-            }
-        });
-        if (arraySize.get() >= Math.ceil((double) (START_CAPACITY * 75) / 100)) {
+        if (NOT_FREE_INDEXES >= Math.ceil((double) (START_CAPACITY * 75) / 100)) {
             START_CAPACITY *= 2;
             Node<Long, V>[] resize = new Node[START_CAPACITY];
             for (Node<Long, V> nd : nodes) {
@@ -290,6 +288,7 @@ public class LongMapImpl<V> implements LongMap<V> {
         Node<Long, V> node = getValueForKey(nd.getKey(), resize);
         if (node == null) {
             resize[getIndex(nd.getKey())] = setNode(nd.getKey(), nd.getValue());
+            NOT_FREE_INDEXES++;
         } else {
             Node<Long, V> nodeForSave = setNode(nd.key, nd.getValue());
             if (compareNode(node, nodeForSave) || node.getKey().equals(nodeForSave.getKey())) {
