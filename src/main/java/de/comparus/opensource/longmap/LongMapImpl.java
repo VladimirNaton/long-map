@@ -7,7 +7,6 @@ import lombok.Setter;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class LongMapImpl<V> implements LongMap<V> {
 
@@ -245,10 +244,7 @@ public class LongMapImpl<V> implements LongMap<V> {
     }
 
 
-    private int getIndex(Long key) {
-        if (key == null) {
-            return 0;
-        }
+    private int getIndex(long key) {
         return (int) (key % START_CAPACITY);
     }
 
