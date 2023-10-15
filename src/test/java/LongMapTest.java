@@ -186,7 +186,6 @@ public class LongMapTest {
 
         assertEquals(1, longMap.size());
 
-
         boolean isPresent = longMap.containsValue("test");
         assertFalse(isPresent);
     }
@@ -200,12 +199,28 @@ public class LongMapTest {
             longMap.put(i, "test" + i);
             i += 16;
         }
-
         String value = longMap.get(48);
 
         assertEquals("test48", value);
 
         longMap.remove(48);
+
+        longMap.remove(0);
+
+        String valueAfter = longMap.get(64);
+        assertEquals("test64", valueAfter);
+    }
+
+    @Test
+    public void testRemoveFirstValue() {
+        LongMapImpl<String> longMap = new LongMapImpl<>();
+
+        for (int i = 0; i < 150; ) {
+            longMap.put(i, "test" + i);
+            i += 16;
+        }
+
+        longMap.remove(0);
 
         String valueAfter = longMap.get(64);
         assertEquals("test64", valueAfter);

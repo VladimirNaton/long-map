@@ -3,6 +3,7 @@ package de.comparus.opensource.longmap;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;
@@ -10,8 +11,8 @@ import java.util.Objects;
 
 public class LongMapImpl<V> implements LongMap<V> {
 
-    private static Integer START_CAPACITY = 16;
-    private static Integer NOT_FREE_INDEXES = 0;
+    private Integer START_CAPACITY = 16;
+    private Integer NOT_FREE_INDEXES = 0;
 
     private Long size = 0L;
 
@@ -25,6 +26,7 @@ public class LongMapImpl<V> implements LongMap<V> {
     @Getter
     @Setter
     @EqualsAndHashCode
+    @ToString
     private static class Node<Long, V> {
         private Node<Long, V> next;
         private Long key;
@@ -36,18 +38,18 @@ public class LongMapImpl<V> implements LongMap<V> {
         if (value != null) {
             Node<Long, V> node = getValueForKey(key, nodes);
             if (node == null) {
-                nodes[getIndex(key)] = setNode(key, value);
+                nodes[getIndex(key)] = createNode(key, value);
                 NOT_FREE_INDEXES++;
                 resize();
                 size++;
             } else {
-                Node<Long, V> nodeForSave = setNode(key, value);
+                Node<Long, V> nodeForSave = createNode(key, value);
                 if (compareNode(node, nodeForSave) || node.getKey().equals(nodeForSave.getKey())) {
                     V oldValue = node.getValue();
                     node.setValue(value);
                     return oldValue;
                 } else {
-                    node.setNext(setNode(key, value));
+                    node.setNext(createNode(key, value));
                     size++;
                     resize();
                 }
@@ -90,21 +92,17 @@ public class LongMapImpl<V> implements LongMap<V> {
                 size--;
                 return node.getValue();
             } else {
-                Node<Long, V> nodeNext;
-                while (true) {
-                    if (node.getNext() != null) {
-                        nodeNext = node.getNext();
-                        if (Objects.equals(nodeNext.getKey(), key)) {
-                            if (nodeNext.getNext() == null) {
-                                node.setNext(null);
-                            } else {
-                                node.setNext(nodeNext.getNext());
-                            }
-                            size--;
-                            return nodeNext.getValue();
+                while (hasNext(node)) {
+                    if (Objects.equals(node.getKey(), key)) {
+                        if (node.getNext() == null) {
+                            node.setNext(null);
                         } else {
-                            node = nodeNext;
+                            node.setNext(node.getNext());
                         }
+                        size--;
+                        return node.getValue();
+                    } else {
+                        node = node.getNext();
                     }
                 }
             }
@@ -133,20 +131,12 @@ public class LongMapImpl<V> implements LongMap<V> {
         int index = 0;
         for (Node<Long, V> node : nodes) {
             if (node != null) {
+                while (hasNext(node)) {
+                    keys[index] = node.getKey();
+                    index++;
+                }
                 keys[index] = node.getKey();
                 index++;
-                if (node.getNext() != null) {
-                    Node<Long, V> nodeNext = node.getNext();
-                    while (true) {
-                        keys[index] = nodeNext.getKey();
-                        index++;
-                        if (nodeNext.getNext() == null) {
-                            break;
-                        } else {
-                            nodeNext = nodeNext.getNext();
-                        }
-                    }
-                }
             }
         }
         return Arrays.stream(keys).sorted().toArray();
@@ -167,20 +157,12 @@ public class LongMapImpl<V> implements LongMap<V> {
         for (Node<Long, V> node : nodes) {
             if (node != null) {
                 if (v != null) {
+                    while (hasNext(node)) {
+                        v[index] = node.getValue();
+                        index++;
+                    }
                     v[index] = node.getValue();
                     index++;
-                    if (node.getNext() != null) {
-                        Node<Long, V> nodeNext = node.getNext();
-                        while (true) {
-                            v[index] = nodeNext.getValue();
-                            index++;
-                            if (nodeNext.getNext() == null) {
-                                break;
-                            } else {
-                                nodeNext = nodeNext.getNext();
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -194,18 +176,11 @@ public class LongMapImpl<V> implements LongMap<V> {
                 if (node.getValue().equals(value)) {
                     return true;
                 }
-                if (node.getNext() != null) {
-                    Node<Long, V> nodeNext = node.getNext();
-                    while (true) {
-                        if (nodeNext.getValue().equals(value)) {
-                            return true;
-                        }
-                        if (nodeNext.getNext() == null) {
-                            break;
-                        } else {
-                            nodeNext = nodeNext.getNext();
-                        }
+                while (hasNext(node)) {
+                    if (node.getValue().equals(value)) {
+                        return true;
                     }
+                    node = node.getNext();
                 }
             }
         }
@@ -222,25 +197,18 @@ public class LongMapImpl<V> implements LongMap<V> {
         } else {
             return null;
         }
+        return getNodeByKey(node, key);
+    }
 
-        if (node.getNext() == null) {
-            return node;
-        }
 
-        while (true) {
-            Node<Long, V> nextNode = node.getNext();
-            if (nextNode == null) {
+    private Node<Long, V> getNodeByKey(Node<Long, V> node, long key) {
+        while (hasNext(node)) {
+            if (node.getKey() == key) {
                 return node;
             }
-            if (nextNode.getKey() == key) {
-                return nextNode;
-            }
-            if (nextNode.getNext() != null) {
-                node = node.getNext();
-            } else {
-                return nextNode;
-            }
+            node = node.getNext();
         }
+        return node;
     }
 
 
@@ -261,18 +229,9 @@ public class LongMapImpl<V> implements LongMap<V> {
             for (Node<Long, V> nd : nodes) {
                 if (nd != null) {
                     saveResize(nd, resize);
-
-                    if (nd.getNext() != null) {
-                        Node<Long, V> nodeNext = nd.getNext();
-                        while (true) {
-                            saveResize(nodeNext, resize);
-
-                            if (nodeNext.getNext() == null) {
-                                break;
-                            } else {
-                                nodeNext = nodeNext.getNext();
-                            }
-                        }
+                    while (hasNext(nd)) {
+                        saveResize(nd, resize);
+                        nd = nd.getNext();
                     }
                 }
             }
@@ -283,22 +242,26 @@ public class LongMapImpl<V> implements LongMap<V> {
     private void saveResize(Node<Long, V> nd, Node<Long, V>[] resize) {
         Node<Long, V> node = getValueForKey(nd.getKey(), resize);
         if (node == null) {
-            resize[getIndex(nd.getKey())] = setNode(nd.getKey(), nd.getValue());
+            resize[getIndex(nd.getKey())] = createNode(nd.getKey(), nd.getValue());
             NOT_FREE_INDEXES++;
         } else {
-            Node<Long, V> nodeForSave = setNode(nd.key, nd.getValue());
+            Node<Long, V> nodeForSave = createNode(nd.key, nd.getValue());
             if (compareNode(node, nodeForSave) || node.getKey().equals(nodeForSave.getKey())) {
                 node.setValue(nd.getValue());
             } else {
-                node.setNext(setNode(nd.getKey(), nd.value));
+                node.setNext(createNode(nd.getKey(), nd.value));
             }
         }
     }
 
-    private Node<Long, V> setNode(long key, V value) {
+    private Node<Long, V> createNode(long key, V value) {
         Node<Long, V> node = new Node<>();
         node.setKey(key);
         node.setValue(value);
         return node;
+    }
+
+    private boolean hasNext(Node<Long, V> node) {
+        return node.getNext() != null;
     }
 }
